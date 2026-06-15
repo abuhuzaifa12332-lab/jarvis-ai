@@ -1,3 +1,14 @@
+![STATUS](https://img.shields.io/badge/STATUS-ONLINE-00ff00?style=for-the-badge&logo=icloud&logoColor=white)
+
+![MODE](https://img.shields.io/badge/MODE-SIMULATION-ff0000?style=for-the-badge&logo=target&logoColor=white)
+
+![PLATFORM](https://img.shields.io/badge/PLATFORM-WEB-0078d7?style=for-the-badge&logo=google-chrome&logoColor=white)
+
+![BUILD](https://img.shields.io/badge/BUILD-STABLE-00c853?style=for-the-badge&logo=checkmarx&logoColor=white)
+
+![LANGUAGE](https://img.shields.io/badge/LANG-JavaScript-f7df1e?style=for-the-badge&logo=javascript&logoColor=black)
+
+![LICENSE](https://img.shields.io/badge/LICENSE-MIT-blue?style=for-the-badge&logo=opensourceinitiative&logoColor=white)
 # 🤖 Jarvis AI — Futuristic Virtual Voice Assistant (V3)
 
 An interactive, web-based AI voice assistant inspired by Jarvis from Iron Man. Built using HTML, CSS, JavaScript, and the Web Speech API, Jarvis AI can listen to voice commands, respond using speech synthesis, open websites, perform searches, and provide useful information directly inside the browser.
