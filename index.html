@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JARVIS – Abu Huzaifa</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#000;font-family:'Share Tech Mono',monospace;color:#00d4ff;overflow:hidden;height:100vh;width:100vw;}
+canvas#bg{position:fixed;inset:0;z-index:0;}
+#photoBg{position:fixed;inset:0;z-index:1;background-size:cover;background-position:center;filter:brightness(0.15) saturate(0.4) hue-rotate(180deg);}
+.overlay{position:fixed;inset:0;background:radial-gradient(ellipse at center,rgba(0,20,40,0.75) 0%,rgba(0,0,0,0.92) 100%);z-index:2;}
+.scanlines{position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,212,255,0.015) 2px,rgba(0,212,255,0.015) 4px);pointer-events:none;z-index:5;}
+
+/* TOPBAR */
+.topbar{position:fixed;top:0;left:0;right:0;padding:10px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(0,212,255,0.15);background:rgba(0,0,0,0.7);backdrop-filter:blur(10px);z-index:100;}
+.logo{font-family:'Orbitron',sans-serif;font-size:18px;font-weight:900;color:#00d4ff;letter-spacing:6px;text-shadow:0 0 20px #00d4ff;}
+#clock{font-family:'Orbitron',sans-serif;font-size:14px;color:#00d4ff;letter-spacing:2px;}
+.topbar-info{font-size:10px;color:rgba(0,212,255,0.4);text-align:right;line-height:1.6;}
+
+/* OWNER */
+.owner-wrap{position:fixed;top:55px;right:16px;display:flex;align-items:center;gap:10px;background:rgba(0,0,0,0.7);border:1px solid rgba(0,212,255,0.2);border-radius:40px;padding:6px 16px 6px 6px;z-index:100;}
+#ownerPic{width:38px;height:38px;border-radius:50%;border:2px solid #00d4ff;box-shadow:0 0 12px #00d4ff66;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:20px;background:rgba(0,212,255,0.1);}
+#ownerPic img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+.owner-text .name{font-family:'Orbitron',sans-serif;font-size:11px;color:#00d4ff;letter-spacing:1px;}
+.owner-text .role{font-size:9px;color:rgba(0,212,255,0.4);}
+
+/* MAIN */
+.main{position:relative;z-index:10;height:100vh;display:flex;flex-direction:column;align-items:center;padding-top:55px;}
+
+/* ORB */
+.orb-wrap{position:relative;width:180px;height:180px;margin:20px auto 10px;flex-shrink:0;}
+.ring{position:absolute;border-radius:50%;border:1px solid rgba(0,212,255,0.25);animation:ringAnim 4s linear infinite;}
+.ring:nth-child(1){inset:0;animation-duration:3s;}
+.ring:nth-child(2){inset:18px;animation-direction:reverse;animation-duration:5s;border-color:rgba(0,180,255,0.15);}
+.ring:nth-child(3){inset:36px;animation-duration:7s;border-color:rgba(0,150,255,0.1);}
+@keyframes ringAnim{0%{transform:rotateX(65deg) rotate(0)}100%{transform:rotateX(65deg) rotate(360deg)}}
+.orb-core{position:absolute;inset:48px;border-radius:50%;background:radial-gradient(circle,rgba(0,212,255,0.25) 0%,rgba(0,60,120,0.15) 60%,transparent 80%);box-shadow:0 0 40px rgba(0,212,255,0.35),inset 0 0 20px rgba(0,212,255,0.1);display:flex;align-items:center;justify-content:center;overflow:hidden;transition:box-shadow 0.3s;}
+.orb-core.talking{box-shadow:0 0 80px rgba(0,212,255,0.8),inset 0 0 40px rgba(0,212,255,0.3);}
+.orb-core.listening{box-shadow:0 0 60px rgba(0,255,100,0.6),inset 0 0 30px rgba(0,255,100,0.2);}
+#orbImg{width:100%;height:100%;object-fit:cover;border-radius:50%;opacity:0.75;filter:hue-rotate(180deg) saturate(0.5) brightness(1.3);display:none;}
+.orb-icon-default{font-size:36px;}
+.pulse-ring{position:absolute;inset:-8px;border-radius:50%;border:2px solid rgba(0,255,100,0.5);opacity:0;animation:pulseRing 1s ease-out infinite;}
+.pulse-ring.active{opacity:1;}
+@keyframes pulseRing{0%{transform:scale(1);opacity:0.8}100%{transform:scale(1.15);opacity:0}}
+
+/* WAVE */
+.wave{display:flex;align-items:center;justify-content:center;gap:3px;height:35px;margin:8px 0;flex-shrink:0;}
+.wb{width:3px;background:rgba(0,212,255,0.3);border-radius:2px;transition:height 0.08s;}
+
+/* STATUS + TRANSCRIPT */
+.status{font-family:'Orbitron',sans-serif;font-size:11px;color:rgba(0,212,255,0.6);letter-spacing:3px;text-align:center;flex-shrink:0;}
+.transcript{font-size:11px;color:rgba(0,212,255,0.4);text-align:center;min-height:16px;margin:4px 0;flex-shrink:0;font-style:italic;}
+
+/* RESPONSE */
+.response{width:90%;max-width:580px;background:rgba(0,20,40,0.85);border:1px solid rgba(0,212,255,0.2);border-radius:12px;padding:14px 18px;font-size:13px;color:rgba(255,255,255,0.9);line-height:1.8;text-align:center;backdrop-filter:blur(10px);flex-shrink:0;margin:6px 0;min-height:55px;}
+
+/* MIC */
+.mic-btn{width:65px;height:65px;border-radius:50%;border:2px solid #00d4ff;background:rgba(0,212,255,0.05);color:#00d4ff;font-size:24px;cursor:pointer;box-shadow:0 0 20px rgba(0,212,255,0.2);transition:all 0.3s;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin:8px auto;}
+.mic-btn.on{border-color:#00ff65;background:rgba(0,255,100,0.1);box-shadow:0 0 40px rgba(0,255,100,0.4);animation:micPulse 0.8s infinite;}
+@keyframes micPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+
+/* QUICK */
+.quick{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;max-width:580px;margin:6px auto;flex-shrink:0;}
+.qb{background:rgba(0,212,255,0.05);border:1px solid rgba(0,212,255,0.18);color:rgba(0,212,255,0.65);padding:5px 12px;border-radius:20px;font-size:10px;cursor:pointer;transition:all 0.2s;letter-spacing:0.5px;}
+.qb:hover,.qb:active{background:rgba(0,212,255,0.15);color:#00d4ff;border-color:#00d4ff;}
+
+/* BOTTOM */
+.bottombar{position:fixed;bottom:0;left:0;right:0;padding:7px 20px;display:flex;justify-content:space-between;border-top:1px solid rgba(0,212,255,0.1);background:rgba(0,0,0,0.7);font-size:10px;color:rgba(0,212,255,0.3);z-index:100;}
+
+/* PHOTO BTN */
+.photo-label{position:fixed;bottom:34px;right:16px;background:rgba(0,0,0,0.8);border:1px solid rgba(0,212,255,0.3);color:rgba(0,212,255,0.6);padding:5px 12px;border-radius:6px;font-size:10px;cursor:pointer;z-index:100;letter-spacing:1px;}
+
+/* SCREEN INFO PANEL */
+#screenPanel{position:fixed;top:55px;left:10px;width:160px;background:rgba(0,0,0,0.8);border:1px solid rgba(0,212,255,0.15);border-radius:8px;padding:10px;z-index:100;font-size:10px;color:rgba(0,212,255,0.5);line-height:2;}
+#screenPanel .sp-title{font-size:9px;letter-spacing:2px;color:rgba(0,212,255,0.3);margin-bottom:6px;border-bottom:1px solid rgba(0,212,255,0.1);padding-bottom:4px;}
+#screenPanel span{color:#00d4ff;}
+</style>
+</head>
+<body>
+
+<canvas id="bg"></canvas>
+<div id="photoBg"></div>
+<div class="overlay"></div>
+<div class="scanlines"></div>
+
+<!-- SCREEN INFO -->
+<div id="screenPanel">
+  <div class="sp-title">◈ SCREEN INFO</div>
+  <div>W: <span id="sw">0</span>px</div>
+  <div>H: <span id="sh">0</span>px</div>
+  <div>URL: <span id="surl">---</span></div>
+  <div>RAM: <span id="sram">---</span></div>
+  <div>CPU: <span id="scpu">---</span></div>
+  <div>Online: <span id="sonline">---</span></div>
+  <div>Battery: <span id="sbat">---</span></div>
+</div>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="logo">J·A·R·V·I·S</div>
+  <div id="clock"></div>
+  <div class="topbar-info">
+    <div id="tdate"></div>
+    <div id="tday"></div>
+  </div>
+</div>
+
+<!-- OWNER -->
+<div class="owner-wrap">
+  <div id="ownerPic"><span>👤</span></div>
+  <div class="owner-text">
+    <div class="name">ABU HUZAIFA</div>
+    <div class="role">OWNER · SECURITY RESEARCHER</div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <!-- ORB -->
+  <div class="orb-wrap">
+    <div class="ring"></div>
+    <div class="ring"></div>
+    <div class="ring"></div>
+    <div class="orb-core" id="orbCore">
+      <img id="orbImg" src="" alt="">
+      <span class="orb-icon-default" id="orbIcon">🤖</span>
+    </div>
+    <div class="pulse-ring" id="pulseRing"></div>
+  </div>
+
+  <!-- WAVE -->
+  <div class="wave" id="wave"></div>
+
+  <div class="status" id="status">JARVIS ONLINE · READY</div>
+  <div class="transcript" id="transcript"></div>
+
+  <!-- RESPONSE -->
+  <div class="response" id="response">
+    Assalamu Alaikum Abu Huzaifa! JARVIS haazir hai. Mic dabao aur koi bhi kaam bolein!
+  </div>
+
+  <!-- MIC -->
+  <button class="mic-btn" id="micBtn" onclick="toggleMic()">🎤</button>
+  <div style="font-size:9px;color:rgba(0,212,255,0.25);letter-spacing:1px;text-align:center;flex-shrink:0;">SPACE = MIC ON/OFF</div>
+
+  <!-- QUICK -->
+  <div class="quick">
+    <div class="qb" onclick="cmd('kaise ho')">Kaise Ho</div>
+    <div class="qb" onclick="cmd('time batao')">Time</div>
+    <div class="qb" onclick="cmd('date batao')">Date</div>
+    <div class="qb" onclick="cmd('tum kaun ho')">Kaun Ho</div>
+    <div class="qb" onclick="cmd('joke sunao')">Joke</div>
+    <div class="qb" onclick="cmd('mujhe motivate karo')">Motivate</div>
+    <div class="qb" onclick="cmd('google kholo')">Google</div>
+    <div class="qb" onclick="cmd('youtube kholo')">YouTube</div>
+    <div class="qb" onclick="cmd('mera screen info batao')">Screen Info</div>
+    <div class="qb" onclick="cmd('battery kitni hai')">Battery</div>
+    <div class="qb" onclick="cmd('network check karo')">Network</div>
+    <div class="qb" onclick="cmd('security scan karo')">Security Scan</div>
+  </div>
+</div>
+
+<!-- BOTTOM -->
+<div class="bottombar">
+  <span>JARVIS v3.0 · ABU HUZAIFA AI SYSTEM · SECURITY RESEARCH MODE</span>
+  <span id="bnet">NETWORK: CHECKING...</span>
+</div>
+
+<!-- PHOTO -->
+<label class="photo-label" for="photoFile">📷 Photo Add Karo</label>
+<input type="file" id="photoFile" accept="image/*" style="display:none" onchange="addPhoto(event)">
+
+<script>
+// ═══ BG HEX GRID ══════════════════════════════════════
+const bgC=document.getElementById('bg');
+const bgX=bgC.getContext('2d');
+function resizeBg(){bgC.width=window.innerWidth;bgC.height=window.innerHeight;drawGrid();}
+function drawGrid(){
+  bgX.clearRect(0,0,bgC.width,bgC.height);
+  bgX.strokeStyle='rgba(0,212,255,0.05)';bgX.lineWidth=0.5;
+  const s=45;
+  for(let x=0;x<bgC.width+s;x+=s*1.5){
+    for(let y=0;y<bgC.height+s;y+=s*0.866*2){
+      hex(x,y,s*0.5);hex(x+s*0.75,y+s*0.866,s*0.5);
+    }
+  }
+}
+function hex(x,y,r){
+  bgX.beginPath();
+  for(let i=0;i<6;i++){const a=Math.PI/3*i-Math.PI/6;i?bgX.lineTo(x+r*Math.cos(a),y+r*Math.sin(a)):bgX.moveTo(x+r*Math.cos(a),y+r*Math.sin(a));}
+  bgX.closePath();bgX.stroke();
+}
+resizeBg();
+window.addEventListener('resize',resizeBg);
+
+// ═══ WAVEFORM ══════════════════════════════════════════
+const waveEl=document.getElementById('wave');
+for(let i=0;i<28;i++){const b=document.createElement('div');b.className='wb';b.style.height='3px';waveEl.appendChild(b);}
+let waveActive=false;
+function animWave(){
+  const bars=waveEl.querySelectorAll('.wb');
+  bars.forEach(b=>{
+    b.style.height=(waveActive?(3+Math.random()*32):3)+'px';
+    b.style.background=waveActive?'#00d4ff':'rgba(0,212,255,0.25)';
+  });
+  if(waveActive)requestAnimationFrame(animWave);
+}
+function setWave(v){waveActive=v;animWave();}
+
+// ═══ CLOCK ════════════════════════════════════════════
+function updateClock(){
+  const n=new Date();
+  const pad=v=>v.toString().padStart(2,'0');
+  document.getElementById('clock').textContent=pad(n.getHours())+':'+pad(n.getMinutes())+':'+pad(n.getSeconds());
+  const days=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  document.getElementById('tdate').textContent=n.getDate()+' '+months[n.getMonth()]+' '+n.getFullYear();
+  document.getElementById('tday').textContent=days[n.getDay()].toUpperCase();
+}
+setInterval(updateClock,1000);updateClock();
+
+// ═══ SCREEN INFO ══════════════════════════════════════
+function updateScreenInfo(){
+  document.getElementById('sw').textContent=window.innerWidth;
+  document.getElementById('sh').textContent=window.innerHeight;
+  document.getElementById('surl').textContent=location.hostname||'local';
+  document.getElementById('sonline').textContent=navigator.onLine?'YES':'NO';
+  document.getElementById('bnet').textContent='NETWORK: '+(navigator.onLine?'ONLINE':'OFFLINE');
+  if(navigator.deviceMemory) document.getElementById('sram').textContent=navigator.deviceMemory+'GB';
+  else document.getElementById('sram').textContent='N/A';
+  if(navigator.hardwareConcurrency) document.getElementById('scpu').textContent=navigator.hardwareConcurrency+' cores';
+  else document.getElementById('scpu').textContent='N/A';
+  // Battery
+  if(navigator.getBattery){
+    navigator.getBattery().then(b=>{
+      document.getElementById('sbat').textContent=Math.round(b.level*100)+'%'+(b.charging?'⚡':'');
+    });
+  }
+}
+updateScreenInfo();
+setInterval(updateScreenInfo,3000);
+
+// ═══ PHOTO ════════════════════════════════════════════
+function addPhoto(e){
+  const file=e.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=r=>{
+    const src=r.target.result;
+    document.getElementById('photoBg').style.backgroundImage=`url(${src})`;
+    const img=document.getElementById('orbImg');
+    img.src=src;img.style.display='block';
+    document.getElementById('orbIcon').style.display='none';
+    document.getElementById('ownerPic').innerHTML=`<img src="${src}">`;
+    speak('Abu Huzaifa, aapki photo add ho gayi. Bilkul dangerous lag rahe hain aap!');
+  };
+  reader.readAsDataURL(file);
+}
+
+// ═══ SPEECH SYNTHESIS ════════════════════════════════
+let voices=[];
+function loadVoices(){voices=window.speechSynthesis.getVoices();}
+window.speechSynthesis.onvoiceschanged=loadVoices;
+loadVoices();
+setTimeout(loadVoices,500);
+setTimeout(loadVoices,1500);
+
+function speak(text){
+  window.speechSynthesis.cancel();
+  document.getElementById('response').textContent=text;
+  const orb=document.getElementById('orbCore');
+  orb.classList.add('talking');
+  setWave(true);
+
+  const chunks=text.match(/.{1,150}(\s|$)/g)||[text];
+  let idx=0;
+  function sayNext(){
+    if(idx>=chunks.length){orb.classList.remove('talking');setWave(false);return;}
+    const utt=new SpeechSynthesisUtterance(chunks[idx++]);
+    // Best voice selection
+    const preferred=voices.find(v=>
+      v.name.includes('Google UK English Female')||
+      v.name.includes('Google US English')||
+      v.name.includes('Microsoft Zira')||
+      v.name.includes('Microsoft David')||
+      (v.lang==='en-US'&&v.localService===false)
+    )||voices.find(v=>v.lang==='en-US')||voices[0];
+    if(preferred)utt.voice=preferred;
+    utt.rate=0.88;
+    utt.pitch=0.8;
+    utt.volume=1;
+    utt.onend=sayNext;
+    utt.onerror=sayNext;
+    window.speechSynthesis.speak(utt);
+  }
+  sayNext();
+}
+
+// ═══ RESPONSE BRAIN ═══════════════════════════════════
+const rand=arr=>arr[Math.floor(Math.random()*arr.length)];
+
+function getResponse(input){
+  const t=input.toLowerCase().trim();
+
+  // Greetings
+  if(/^(hello|hi|hey|salam|assalam|adaab|haan jarvis|jarvis|sun)/.test(t)||t.length<5)
+    return rand(['Ji Abu Huzaifa! Kya hukum hai?','Haan huzoor! Haazir hoon. Kya kaam hai?','Abu Huzaifa, boliye! Main sun raha hoon.']);
+
+  // Kaise ho
+  if(/kaise|kaisa|how are|theek|sab theek/.test(t))
+    return rand(['Main bilkul theek hoon Abu Huzaifa! Ek AI kabhi thak nahi sakta. Aap batao, kya kaam hai?','Main mast hoon! Aapki seva mein hamesha ready. Aap kaise hain?','Sab theek hai boss! Systems fully operational. Kya hukum hai?']);
+
+  // Kaun ho / owner / creator
+  if(/kaun ho|kaun hain|tum kaun|who are you|apna parichay|introduce/.test(t))
+    return 'Main JARVIS hoon — Just A Rather Very Intelligent System. Mujhe Abu Huzaifa ne banaya hai. Woh mere creator hain, mere owner hain, aur ek top security researcher hain. Main unka personal AI assistant hoon.';
+
+  if(/owner|creator|kisne banaya|tumhara malik|tera malik|tera creator/.test(t))
+    return 'Mere owner aur creator Abu Huzaifa hain — ek brilliant security researcher. Main unke liye kuch bhi kar sakta hoon!';
+
+  // Naam
+  if(/mera naam|my name|main kaun hoon|mujhe kaun/.test(t))
+    return rand(['Aap Abu Huzaifa hain — mere creator, mere owner, aur ek zabardast security researcher!','Abu Huzaifa — ek naam jo hacker community mein respect se liya jata hai!']);
+
+  // Time
+  if(/time|waqt|baj|kitne baj/.test(t)){
+    const n=new Date();const h=n.getHours();const m=n.getMinutes();
+    const p=h<12?'Subah':h<17?'Dopahar':h<20?'Shaam':'Raat';
+    return `Abhi ${p} ke ${h} baj ke ${m} minute ho rahe hain, Abu Huzaifa.`;
+  }
+
+  // Date
+  if(/date|aaj|tarikh|din kaun|kaun sa din/.test(t)){
+    const n=new Date();
+    const days=['Itwar','Somwar','Mangal','Budh','Jumeraat','Juma','Hafta'];
+    const months=['January','February','March','April','May','June','July','August','September','October','November','December'];
+    return `Aaj ${days[n.getDay()]} hai, ${n.getDate()} ${months[n.getMonth()]} ${n.getFullYear()}.`;
+  }
+
+  // Battery
+  if(/battery|charge|power/.test(t)){
+    if(navigator.getBattery){
+      navigator.getBattery().then(b=>{
+        const pct=Math.round(b.level*100);
+        speak(`Abu Huzaifa, battery abhi ${pct} percent hai${b.charging?' aur charge ho rahi hai':' aur charge nahi ho rahi'}. ${pct<20?'Jaldi charger lagao!':pct>80?'Battery theek hai.':''}`);
+      });
+      return null;
+    }
+    return 'Battery information is mein available nahi hai. Browser settings check karein.';
+  }
+
+  // Network
+  if(/network|internet|wifi|connection|online/.test(t)){
+    const status=navigator.onLine;
+    return `Network status: ${status?'ONLINE hai, connection stable lag raha hai':'OFFLINE hai! Internet check karein'}, Abu Huzaifa. ${navigator.deviceMemory?'Device mein '+navigator.deviceMemory+' GB RAM hai.':''}`;
+  }
+
+  // Screen info
+  if(/screen|display|resolution|window size/.test(t))
+    return `Screen resolution ${window.innerWidth} by ${window.innerHeight} pixels hai. ${navigator.hardwareConcurrency} CPU cores available hain. ${navigator.deviceMemory?navigator.deviceMemory+' GB RAM hai.':''}`;
+
+  // Security scan
+  if(/security|scan|hack|vulnerability|pentest|exploit|attack/.test(t))
+    return rand([
+      'Security researcher mode active! Abu Huzaifa, aap jaante hain ke ethical hacking mein pehle scope define karna zaroori hai. Kaunsa target scan karna hai?',
+      'Penetration testing ke liye Chromebook mein Kali Linux tools available hain. Koi specific vulnerability check karni hai?',
+      'Security scan initiated in monitoring mode. Network packets analyze kar raha hoon. Abu Huzaifa, aap is field ke expert hain!',
+    ]);
+
+  // Joke
+  if(/joke|mazak|funny|hasa|hanso/.test(t))
+    return rand([
+      'Ek hacker ne password rakha tha "incorrect". Jab bhi bhool jata tha, computer khud kehta — aapka password incorrect hai!',
+      'Ek programmer ne wife ko kaha — Baazar se ek litre doodh laana, aur agar ande hon toh 6 lena. Woh 6 litre doodh le aaya!',
+      'Sysadmin ka pehla rule: Agar kuch kaam kar raha hai — mat chheyna!',
+      'Cybersecurity expert ko neend nahi aati. Kyunki har jagah vulnerability nazar aati hai!',
+    ]);
+
+  // Motivate
+  if(/motivat|himmat|hausla|inspire|sad|upset|musalman/.test(t))
+    return rand([
+      'Abu Huzaifa, aap extraordinary hain! Security research mein jo log naam kamate hain, woh apni mehnat se kamate hain — aur aap us raaste par hain. Aage badho!',
+      'Mushkilaat insaan ko tode nahi, torate hain. Abu Huzaifa, Allah pe bharosa rakho, koshish karte raho!',
+      'Duniya ke sab se bade security researchers ne bhi kabhi ek din se shuru kiya tha. Aap pehle se bahut aage hain!',
+    ]);
+
+  // Google
+  if(/google kholo|google open|google start/.test(t)){
+    setTimeout(()=>window.open('https://google.com','_blank'),1200);
+    return 'Ji Abu Huzaifa! Google khol raha hoon.';
+  }
+
+  // YouTube
+  if(/youtube|video|music/.test(t)){
+    setTimeout(()=>window.open('https://youtube.com','_blank'),1200);
+    return 'YouTube khol raha hoon Abu Huzaifa!';
+  }
+
+  // GitHub
+  if(/github|code|repository/.test(t)){
+    setTimeout(()=>window.open('https://github.com','_blank'),1200);
+    return 'GitHub khol raha hoon!';
+  }
+
+  // WhatsApp
+  if(/whatsapp|message|msg/.test(t)){
+    setTimeout(()=>window.open('https://web.whatsapp.com','_blank'),1200);
+    return 'WhatsApp Web khol raha hoon, Abu Huzaifa!';
+  }
+
+  // Math
+  const mathMatch=t.match(/(\d+\.?\d*)\s*(plus|minus|times|divided by|aur|ghata|guna|\+|\-|\*|\/)\s*(\d+\.?\d*)/);
+  if(mathMatch){
+    const a=parseFloat(mathMatch[1]),op=mathMatch[2],b=parseFloat(mathMatch[3]);
+    let result,opWord;
+    if(/plus|\+|aur/.test(op)){result=a+b;opWord='jama';}
+    else if(/minus|\-|ghata/.test(op)){result=a-b;opWord='minus';}
+    else if(/times|\*|guna/.test(op)){result=a*b;opWord='guna';}
+    else if(/divided|\//.test(op)){result=b!==0?a/b:'undefined';opWord='taqseem';}
+    return `${a} aur ${b} ka ${opWord} ${result} hota hai, Abu Huzaifa.`;
+  }
+
+  // Search
+  if(/search kar|dhundo|find kar|google pe/.test(t)){
+    const q=t.replace(/search kar|dhundo|find kar|google pe/g,'').trim();
+    if(q){setTimeout(()=>window.open(`https://google.com/search?q=${encodeURIComponent(q)}`,'_blank'),1200);return `"${q}" Google pe search kar raha hoon!`;}
+  }
+
+  // Mausam
+  if(/mausam|weather|barish|garmi|sardi|temperature/.test(t)){
+    setTimeout(()=>window.open('https://weather.com','_blank'),1200);
+    return 'Mausam check kar raha hoon Abu Huzaifa! Weather website khol raha hoon.';
+  }
+
+  // Thank you
+  if(/shukriya|thank|shukria|meharbani|very good|wah wah/.test(t))
+    return rand(['Koi baat nahi Abu Huzaifa! Aapki khidmat karna mera farz hai.','Yeh toh mera kaam hai boss! Aur kuch chahiye?','Jab chahein hukum karein, hamesha haazir hoon!']);
+
+  // Bye
+  if(/bye|alvida|band karo|so ja|raat khair/.test(t))
+    return 'Alvida Abu Huzaifa! Allah hafiz. JARVIS hamesha aapki seva mein haazir hai. Aachi raat!';
+
+  // Default smart fallback
+  const defaults=[
+    `"${input}" — samajh gaya. Iske baare mein Google pe search karta hoon!`,
+    `Abu Huzaifa, "${input}" ke baare mein mujhe thoda aur seekhna hoga. Abhi Google pe search karta hoon!`,
+    `Interesting! "${input}" — yeh command meri training mein nahi thi. Kya main Google pe dhundun?`,
+  ];
+  const ans=rand(defaults);
+  setTimeout(()=>window.open(`https://google.com/search?q=${encodeURIComponent(input)}`,'_blank'),2000);
+  return ans;
+}
+
+function cmd(text){
+  document.getElementById('transcript').textContent='"'+text+'"';
+  document.getElementById('status').textContent='PROCESSING...';
+  const res=getResponse(text);
+  if(res){speak(res);}
+  document.getElementById('status').textContent='JARVIS READY';
+}
+
+// ═══ SPEECH RECOGNITION ═══════════════════════════════
+let recog=null,listening=false;
+
+function setupRecog(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){speak('Chrome browser mein yeh kaam karta hai. Abhi type karein!');return false;}
+  recog=new SR();
+  recog.continuous=false;
+  recog.interimResults=true;
+  recog.maxAlternatives=3;
+
+  recog.onstart=()=>{
+    listening=true;
+    document.getElementById('micBtn').classList.add('on');
+    document.getElementById('pulseRing').classList.add('active');
+    document.getElementById('orbCore').classList.add('listening');
+    document.getElementById('status').textContent='SUN RAHA HOON...';
+    setWave(true);
+  };
+
+  recog.onresult=e=>{
+    let interim='',final='';
+    for(let i=e.resultIndex;i<e.results.length;i++){
+      if(e.results[i].isFinal) final+=e.results[i][0].transcript;
+      else interim+=e.results[i][0].transcript;
+    }
+    document.getElementById('transcript').textContent='"'+(final||interim)+'"';
+    if(final){
+      stopListening();
+      cmd(final.trim());
+    }
+  };
+
+  recog.onerror=e=>{
+    stopListening();
+    if(e.error==='no-speech') speak('Kuch sunai nahi diya. Dobara bolein!');
+    else if(e.error==='not-allowed') speak('Mic permission do! Browser mein Allow karo.');
+    else speak('Error aayi. Dobara try karo Abu Huzaifa!');
+  };
+
+  recog.onend=()=>stopListening();
+  return true;
+}
+
+function stopListening(){
+  listening=false;
+  document.getElementById('micBtn').classList.remove('on');
+  document.getElementById('pulseRing').classList.remove('active');
+  document.getElementById('orbCore').classList.remove('listening');
+  document.getElementById('status').textContent='JARVIS READY';
+  setWave(false);
+}
+
+function toggleMic(){
+  if(!recog){if(!setupRecog())return;}
+  if(listening){recog.stop();return;}
+  // Try Urdu first, then English
+  recog.lang='en-US'; // English most reliable on Chromebook
+  try{recog.start();}
+  catch(e){speak('Mic already use ho rahi hai. Ek second ruko!');}
+}
+
+// Space bar shortcut
+document.addEventListener('keydown',e=>{
+  if(e.code==='Space'&&e.target.tagName!=='INPUT'){e.preventDefault();toggleMic();}
+});
+
+// ═══ STARTUP ══════════════════════════════════════════
+setTimeout(()=>{
+  voices=window.speechSynthesis.getVoices();
+  speak('Assalamu Alaikum Abu Huzaifa! Main JARVIS hoon, aapka personal AI assistant. Systems fully online hain. Mic dabao ya koi bhi command bolein — main haazir hoon!');
+},1800);
+</script>
+</body>
+</html>
